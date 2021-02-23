@@ -1,0 +1,81 @@
+[[local|localrc]]
+# NOTE: THIS IS THE LOCAL HOST IP ON THE OPENSTACK MANAGEMENT NETWORK
+MY_IP=192.168.1.199
+HOST_IP=$MY_IP
+SERVICE_HOST=$MY_IP
+MYSQL_HOST=$MY_IP
+RABBIT_HOST=$MY_IP
+GLANCE_HOSTPORT=$MY_IP
+ADMIN_PASSWORD=stack
+DATABASE_PASSWORD=$ADMIN_PASSWORD
+RABBIT_PASSWORD=$ADMIN_PASSWORD
+SERVICE_PASSWORD=$ADMIN_PASSWORD
+
+ENABLED_SERVICES=key,n-api,n-cpu,n-cond,n-sch,n-novnc,n-api-meta,placement-api,placement-client,g-api,q-svc,q-dhcp,q-meta,q-agt,q-l3,horizon,rabbit,mysql,networking_baremetal,ironic,ir-api,ir-cond,devstack@virtualbmc.service,n-novnc-cell1,n-super-cond,n-cond-cell1
+
+NEUTRON_REPO=https://github.com/Dell-EMC-Cloud/neutron.git
+NEUTRON_BRANCH=powerscale
+
+
+# Enable Ironic plugin
+#enable_plugin ironic https://opendev.org/openstack/ironic
+enable_plugin ironic https://github.com/Dell-EMC-Cloud/ironic.git powerscale
+IRONIC_DEPLOY_DRIVER=ipmi
+IRONIC_VM_EPHEMERAL_DISK=0
+IRONIC_BUILD_DEPLOY_RAMDISK=False
+VIRT_DRIVER=ironic
+
+# Enable networking-baremetal plugin
+enable_plugin networking-baremetal https://github.com/Dell-EMC-Cloud/networking-baremetal.git powerscale
+enable_service networking_baremetal
+enable_service ir-neutronagt
+
+LOGDIR=$HOME/logs
+LOGFILE=$HOME/logs/devstack.log
+
+# Create 3 virtual machines to pose as Ironic's baremetal nodes.
+IRONIC_VM_COUNT=3
+#IRONIC_BAREMETAL_BASIC_OPS=True
+DEFAULT_INSTANCE_TYPE=baremetal
+IRONIC_VM_LOG_DIR=$HOME/ironic-bm-logs
+IRONIC_ENABLED_NETWORK_INTERFACES=noop,flat,neutron
+IRONIC_DEFAULT_NETWORK_INTERFACE=neutron
+IRONIC_ENABLED_RESCUE_INTERFACES=fake,no-rescue,agent
+IRONIC_AUTOMATED_CLEAN_ENABLED=False
+
+## Neutron options
+#Q_USE_SECGROUP=True
+#FLOATING_RANGE="172.18.161.0/24"
+#Q_FLOATING_ALLOCATION_POOL=start=172.18.161.250,end=172.18.161.254
+#PUBLIC_NETWORK_GATEWAY="172.18.161.1"
+#PUBLIC_INTERFACE=enp0s8
+
+#Q_USE_PROVIDERNET_FOR_PUBLIC=False
+
+#disable_service neutron-q-l3
+
+IPV4_ADDRS_SAFE_TO_USE="172.19.1.0/24"
+# Linuxbridge Settings
+
+Q_ML2_PLUGIN_MECHANISM_DRIVERS=linuxbridge
+PUBLIC_PHYSICAL_NETWORK=public-net
+Q_AGENT=linuxbridge
+
+# NOTE: FOR THE FOLLOWING TWO LINES, REPLACE THE INTERFACE NAME TO THAT ON YOUR MACHINE
+# THAT'S ON THE OPENSTACK MANAGEMENT NETWORK
+LB_PHYSICAL_INTERFACE=wlp108s0
+LB_INTERFACE_MAPPINGS=test-net:wlp108s0
+Q_ML2_TENANT_NETWORK_TYPE=vlan
+ML2_VLAN_RANGES=test-net:100:200
+
+[[post-config|/$Q_PLUGIN_CONF_FILE]]
+[DEFAULT]
+log_dir = /opt/stack/logs
+log_file = neutron.log
+
+[[post-config|/$IRONIC_CONF_FILE]]
+[DEFAULT]
+log_dir = /opt/stack/logs
+log_file = ironic.log
+[neutron]
+provisioning_network = private
