@@ -192,7 +192,7 @@ function create_vm {
 	  </devices>
 	</domain>
 EOF
-    sudo virsh define $vmxml
+    virsh define $vmxml
 }
 
 if [[ -z "$1" ]]; then
@@ -255,10 +255,12 @@ baremetal node set $NODE \
 
 baremetal port create $MGMT_MAC1 --node $NODE_UUID --pxe-enable true --physical-network test-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000
 
-PROVISION_VIF=$(openstack port list | grep $OLD_MGMTMAC |  awk '{print $2}')
+if [[ -n $OLD_MGMTMAC ]]; then
+    PROVISION_VIF=$(openstack port list | grep $OLD_MGMTMAC |  awk '{print $2}')
 
-if [[ -n $PROVISION_VIF ]]; then
-    openstack port delete $PROVISION_VIF
+    if [[ -n $PROVISION_VIF ]]; then
+       openstack port delete $PROVISION_VIF
+    fi
 fi
 
 openstack port delete $NODE-mgmt-port 2>> /dev/null
@@ -271,17 +273,17 @@ baremetal node vif attach --port-uuid $MGMT_PORT $NODE $MGMT_VIF
 
 
 baremetal node set $NODE \
-    --driver-info deploy_kernel=http://192.168.1.199:3928/static/memdisk \
-    --driver-info deploy_ramdisk=http://192.168.1.199:3928/static/ipa-mfsbsd-em0.img
+    --driver-info deploy_kernel=http://172.19.1.1:3928/static/memdisk \
+    --driver-info deploy_ramdisk=http://172.19.1.1:3928/static/ipa-mfsbsd-em0.img
 
 baremetal node set $NODE \
-    --driver-info rescue_kernel=http://192.168.1.199:3928/static/memdisk \
-    --driver-info rescue_ramdisk=http://192.168.1.199:3928/static/ipa-mfsbsd-em0.img
+    --driver-info rescue_kernel=http://172.19.1.1:3928/static/memdisk \
+    --driver-info rescue_ramdisk=http://172.19.1.1:3928/static/ipa-mfsbsd-em0.img
 
 CHECKSUM=$(md5sum /opt/stack/data/ironic/httpboot/static/install.tar.gz | awk '{print $1}')
 
 baremetal node set $NODE \
-    --instance-info image_source=http://192.168.1.199:3928/static/install.tar.gz \
+    --instance-info image_source=http://172.19.1.1:3928/static/install.tar.gz \
     --instance-info image_checksum=$CHECKSUM \
     --instance-info image_type=whole-disk-image \
     --instance-info root_gb=16
@@ -291,7 +293,7 @@ sleep 30
 
 baremetal node manage $NODE
 baremetal node provide $NODE
-baremetal node deploy $NODE --config-drive http://192.168.1.199:3928/static/machineid_${MACHINEID}
+baremetal node deploy $NODE --config-drive http://172.19.1.1:3928/static/machineid_${MACHINEID}
 
 
 
