@@ -195,14 +195,46 @@ EOF
     virsh define $vmxml
 }
 
-if [[ -z "$1" ]]; then
-	echo "baremetal.sh <nodename>"
-	exit 1
+OP=$1
+NODE=$2
+
+if [[ -z "$1" || -z "$2" || ($1 != 'create' && $1 != 'delete') ]]; then
+    echo "baremetal.sh <create|delete> <node1|node2|node3> [<image>]"
+    exit 1
 fi
 
-NODE=$1
+
 MACHINEID=${NODE:4}
 
+MFSBSD=ipa-mfsbsd-em0.img
+if [[ -n $3 ]]; then
+    MFSBSD=$3
+fi
+
+
+VMDIR=$MACHINE_DIR/$NODE
+VMXML=$VMDIR/$NODE.xml
+
+if [[ -e $VMXML ]]; then
+    OLD_MGMTMAC=$(grep 'mac address' ${VMXML} | head -n 1 | cut -d "'" -f2)
+fi
+
+if [ -d $VMDIR ]; then
+    virsh destroy $NODE 2>> /dev/null
+    virsh undefine $NODE 2>> /dev/null
+    sudo rm -rf $VMDIR
+fi
+
+if vbmc show $NODE; then
+    vbmc delete $NODE
+fi
+
+baremetal node maintenance set $NODE 2>> /dev/null
+baremetal node delete $NODE 2>> /dev/null
+
+if [[ $1 == 'delete' ]]; then
+    exit
+fi
 
 MGMT_NET_ID=$(openstack net list | grep private | awk '{print $2}')
 BE_NET_ID=$(openstack net list | grep onefs-be | awk '{print $2}')
@@ -217,24 +249,9 @@ MGMT_MAC2=$(generate_mac)
 BE_MAC=$(generate_mac)
 FE_MAC=$(generate_mac)
 
-VMDIR=$MACHINE_DIR/$NODE
-VMXML=$VMDIR/$NODE.xml
-OLD_MGMTMAC=$(grep 'mac address' ${VMXML} | head -n 1 | cut -d "'" -f2)
 
-if [ -d $VMDIR ]; then
-    virsh destroy $NODE 2>> /dev/null
-    virsh undefine $NODE 2>> /dev/null
-    sudo rm -rf $VMDIR
-fi
 mkdir -p $VMDIR
-
-baremetal node maintenance set $NODE 2>> /dev/null
-baremetal node delete $NODE 2>> /dev/null
 create_vm $NODE $VMDIR $VMXML $MGMT_BR $MGMT_MAC1 $MGMT_MAC2 $BE_BR $BE_MAC $FE_BR $FE_MAC
-
-if vbmc show $NODE; then
-    vbmc delete $NODE
-fi
 
 echo "add $NODE to vbmc"
 IPMIPORT=`shuf -i 1200-2000 -n 1`
@@ -242,7 +259,6 @@ while ! vbmc add $NODE --port $IPMIPORT; do
 	IPMIPORT=`shuf -i 1200-2000 -n 1`
 done
 vbmc start $NODE
-
 
 
 NODE_UUID=$(baremetal node create --name $NODE --driver ipmi --deploy-interface direct --rescue-interface agent | grep '| uuid ' | awk '{print $4}')
@@ -274,11 +290,11 @@ baremetal node vif attach --port-uuid $MGMT_PORT $NODE $MGMT_VIF
 
 baremetal node set $NODE \
     --driver-info deploy_kernel=http://172.19.1.1:3928/static/memdisk \
-    --driver-info deploy_ramdisk=http://172.19.1.1:3928/static/ipa-mfsbsd-em0.img
+    --driver-info deploy_ramdisk=http://172.19.1.1:3928/static/$MFSBSD
 
 baremetal node set $NODE \
     --driver-info rescue_kernel=http://172.19.1.1:3928/static/memdisk \
-    --driver-info rescue_ramdisk=http://172.19.1.1:3928/static/ipa-mfsbsd-em0.img
+    --driver-info rescue_ramdisk=http://172.19.1.1:3928/static/$MFSBSD
 
 CHECKSUM=$(md5sum /opt/stack/data/ironic/httpboot/static/install.tar.gz | awk '{print $1}')
 
