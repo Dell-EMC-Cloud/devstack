@@ -1,0 +1,4 @@
+curl -v -k -u root:D@ngerous1 -H "OData-Version: 4.0" -H "Content-Type: application/json" -X POST -d '{"ResetType": "On"}' https://100.127.0.211/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset
+
+curl -v -k -u root:D@ngerous1 https://100.127.0.211/redfish/v1/Systems/System.Embedded.1 | jq .
+
