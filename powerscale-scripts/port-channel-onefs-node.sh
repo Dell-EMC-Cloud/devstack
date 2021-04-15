@@ -66,6 +66,8 @@ baremetal node set $ONEFS_NODE \
 
 baremetal port create 0C:42:A1:E0:83:E0 --node $NODE_UUID --pxe-enabled true --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}"
 
+baremetal port create 0C:42:A1:E0:83:E1 --node $NODE_UUID --pxe-enabled true --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.126', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}"
+
 # Port on Backend Fabric 1
 BSF1_PORT=$(baremetal port create 04:3F:72:A2:3C:BA --node $NODE_UUID --pxe-enable false --physical-network bsf1-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
 BSF1_VIF=$(openstack port create $ONEFS_NODE-bsf1-port --network bsf1-onefs-cluster | grep "| id "| awk '{print $4}')
@@ -77,14 +79,24 @@ BSF2_VIF=$(openstack port create $ONEFS_NODE-bsf2-port --network bsf2-onefs-clus
 baremetal node vif attach --port-uuid $BSF2_PORT $ONEFS_NODE $BSF2_VIF
 
 # Port on Mgmt network
-MGMT_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
+MGMT_PGP_ID=$(baremetal port group create --node $NODE_UUID --name mgmt-pgp --address $(generate_mac) --mode 802.3ad --property miimon=100 --property xmit_hash_policy="layer2+3" |  grep '| uuid ' | awk '{print $4}')
+
+
+MGMT_PORT1=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" --port-group $MGMT_PGP_ID | grep '| uuid ' | awk '{print $4}')
+
+MGMT_PORT2=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.126', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" --port-group $MGMT_PGP_ID | grep '| uuid ' | awk '{print $4}')
+
 MGMT_VIF=$(openstack port create $ONEFS_NODE-mgmt-port --network fsf-mgmt-net | grep "| id "| awk '{print $4}')
-baremetal node vif attach --port-uuid $MGMT_PORT $ONEFS_NODE $MGMT_VIF
+baremetal node vif attach --vif-info portgroup-uuid=$MGMT_PGP_ID $ONEFS_NODE $MGMT_VIF
 
 # Port on Customer Data network
-DATA_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
+DATA_PGP_ID=$(baremetal port group create --node $NODE_UUID --name data-pgp --address $(generate_mac) --mode 802.3ad --property miimon=100 --property xmit_hash_policy="layer2+3" |  grep '| uuid ' | awk '{print $4}')
+
+DATA_PORT1=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" --port-group $DATA_PGP_ID | grep '| uuid ' | awk '{print $4}')
+DATA_PORT2=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.126', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" --port-group $DATA_PGP_ID | grep '| uuid ' | awk '{print $4}')
+
 DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network fsf-cust-data-net | grep "| id "| awk '{print $4}')
-baremetal node vif attach --port-uuid $DATA_PORT $ONEFS_NODE $DATA_VIF
+baremetal node vif attach --vif-info portgroup-uuid=$DATA_PGP_ID $ONEFS_NODE $DATA_VIF
 
 
 baremetal node set $ONEFS_NODE \
