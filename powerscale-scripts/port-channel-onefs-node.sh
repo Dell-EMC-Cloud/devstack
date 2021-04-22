@@ -34,9 +34,11 @@ PROV_SRV=172.19.16.1:3928
 
 baremetal node maintenance set $ONEFS_NODE 2>> /dev/null
 OLD_NODE_UUID=`baremetal node list | grep $ONEFS_NODE | awk '{print $2}'`
-AGENT_ID=`openstack net agent list | grep $OLD_NODE_UUID |  awk '{print $2}'`
+if [[ -n "$OLD_NODE_UUID" ]]; then
+    AGENT_ID=`openstack net agent list | grep $OLD_NODE_UUID |  awk '{print $2}'`
+fi
 if [[ -n "$AGENT_ID" ]]; then
-   openstack net agent delete $AGENT_ID
+    openstack net agent delete $AGENT_ID
 fi
 baremetal node delete $ONEFS_NODE 2>> /dev/null
 openstack port delete $ONEFS_NODE-bsf1-port 2>> /dev/null
