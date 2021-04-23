@@ -20,6 +20,8 @@ if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete')
     exit 1
 fi
 
+source $2
+
 MFSBSD=pic-mfsbsd.iso
 if [[ -n $3 ]]; then
     MFSBSD=$3

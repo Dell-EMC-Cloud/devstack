@@ -1,0 +1,7 @@
+export ONEFS_NODE=onefs-node1
+export REDFISH_ADDRESS=100.127.0.211
+export PXE_PORT1=(0C:42:A1:E0:83:E0 100.127.0.125 ethernet1/1/1:1)
+export PXE_PORT2=(0C:42:A1:E0:83:E1 100.127.0.126 ethernet1/1/1:1)
+export INT_PORT1=04:3F:72:A2:3C:BA
+export INT_PORT2=04:3F:72:A2:3C:BB
+export CONFIG_DRIVE=onefs-node1.json
