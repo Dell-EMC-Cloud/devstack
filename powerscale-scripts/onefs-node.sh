@@ -13,10 +13,9 @@ function generate_mac {
 }
 
 OP=$1
-ONEFS_NODE=onefs-node$2
 
 if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') ]]; then
-    echo "baremetal.sh <bios|uefi|delete> <1|2|3> [<image>] [onefs-image]"
+    echo "baremetal.sh <bios|uefi|delete> <node-spec-file> [<image>] [onefs-image]"
     exit 1
 fi
 
@@ -57,7 +56,7 @@ NODE_UUID=$(baremetal node create --name $ONEFS_NODE --driver idrac --deploy-int
 baremetal node set $ONEFS_NODE \
     --driver-info redfish_username=root \
     --driver-info redfish_password=D@ngerous1 \
-    --driver-info redfish_address=100.127.0.211 \
+    --driver-info redfish_address=$REDFISH_ADDRESS \
     --driver-info redfish_system_id=/redfish/v1/Systems/System.Embedded.1 \
     --driver-info redfish_verify_ca=False \
     --bios-interface idrac-redfish \
@@ -68,25 +67,25 @@ baremetal node set $ONEFS_NODE \
     --driver-info rescuing_network=fsf-provisioning-net
 #    --boot-interface idrac-redfish-virtual-media \
 
-baremetal port create 0C:42:A1:E0:83:E0 --node $NODE_UUID --pxe-enabled true --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}"
+baremetal port create ${PXE_PORT1[0]} --node $NODE_UUID --pxe-enabled true --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}"
 
 # Port on Backend Fabric 1
-BSF1_PORT=$(baremetal port create 04:3F:72:A2:3C:BA --node $NODE_UUID --pxe-enable false --physical-network bsf1-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
+BSF1_PORT=$(baremetal port create $INT_PORT1 --node $NODE_UUID --pxe-enable false --physical-network bsf1-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
 BSF1_VIF=$(openstack port create $ONEFS_NODE-bsf1-port --network bsf1-onefs-cluster | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $BSF1_PORT $ONEFS_NODE $BSF1_VIF
 
 # Port on Backend Fabric 2
-BSF2_PORT=$(baremetal port create 04:3F:72:A2:3C:BB --node $NODE_UUID --pxe-enable false --physical-network bsf2-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
+BSF2_PORT=$(baremetal port create $INT_PORT2 --node $NODE_UUID --pxe-enable false --physical-network bsf2-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
 BSF2_VIF=$(openstack port create $ONEFS_NODE-bsf2-port --network bsf2-onefs-cluster | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $BSF2_PORT $ONEFS_NODE $BSF2_VIF
 
 # Port on Mgmt network
-MGMT_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
+MGMT_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
 MGMT_VIF=$(openstack port create $ONEFS_NODE-mgmt-port --network fsf-mgmt-net | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $MGMT_PORT $ONEFS_NODE $MGMT_VIF
 
 # Port on Customer Data network
-DATA_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="ethernet1/1/1:1" --local-link-connection switch_info="{'switch_ip': '100.127.0.125', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
+DATA_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
 DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network fsf-cust-data-net | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $DATA_PORT $ONEFS_NODE $DATA_VIF
 
@@ -115,7 +114,12 @@ sleep 30
 
 baremetal node manage $ONEFS_NODE
 baremetal node provide $ONEFS_NODE
-baremetal node deploy $ONEFS_NODE --config-drive http://$PROV_SRV/static/$ONEFS_NODE.json
+if [[ -n $CONFIG_DRIVE ]]; then
+    baremetal node deploy $ONEFS_NODE --config-drive http://$PROV_SRV/static/$CONFIG_DRIVE
+else
+    baremetal node deploy $ONEFS_NODE
+fi
+
 
 
 
