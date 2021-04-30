@@ -98,7 +98,7 @@ DATA_PGP_ID=$(baremetal port group create --node $NODE_UUID --name ${ONEFS_NODE}
 DATA_PORT1=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" --port-group $DATA_PGP_ID | grep '| uuid ' | awk '{print $4}')
 DATA_PORT2=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT2[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT2[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" --port-group $DATA_PGP_ID | grep '| uuid ' | awk '{print $4}')
 
-DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network fsf-cust-data-net | grep "| id "| awk '{print $4}')
+DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network $DATA_NETWORK | grep "| id "| awk '{print $4}')
 baremetal node vif attach --vif-info portgroup-uuid=$DATA_PGP_ID $ONEFS_NODE $DATA_VIF
 
 

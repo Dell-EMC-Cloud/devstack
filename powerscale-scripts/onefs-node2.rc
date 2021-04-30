@@ -4,3 +4,5 @@ export PXE_PORT1=(0C:42:A1:E0:84:30 100.127.0.125 ethernet1/1/1:2)
 export PXE_PORT2=(0C:42:A1:E0:84:31 100.127.0.126 ethernet1/1/1:2)
 export INT_PORT1=04:3F:72:A2:46:9A
 export INT_PORT2=04:3F:72:A2:46:9B
+export CONFIG_DRIVE=onefs-node2.json
+export DATA_NETWORK=fsf-cust-data-net-2

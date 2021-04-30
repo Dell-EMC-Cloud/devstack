@@ -86,7 +86,7 @@ baremetal node vif attach --port-uuid $MGMT_PORT $ONEFS_NODE $MGMT_VIF
 
 # Port on Customer Data network
 DATA_PORT=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" | grep '| uuid ' | awk '{print $4}')
-DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network fsf-cust-data-net | grep "| id "| awk '{print $4}')
+DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network $DATA_NETWORK | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $DATA_PORT $ONEFS_NODE $DATA_VIF
 
 
