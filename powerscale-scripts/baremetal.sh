@@ -1,5 +1,6 @@
 #! /bin/bash
-# baremetal.sh <node>
+# baremetal.sh <operation> <node> <mfsbsd image> <onefs image>
+# ./baremetal.sh create node1 ipa-mfsbsd-em0.img agg_install.tar.gz
 
 set -x
 
@@ -211,6 +212,13 @@ if [[ -n $3 ]]; then
     MFSBSD=$3
 fi
 
+ONEFS_IMAGE=install.tar.gz
+if [[ -n $4 ]]; then
+    ONEFS_IMAGE=$4
+fi
+
+PROV_SRV=172.19.1.1:3928
+
 
 VMDIR=$MACHINE_DIR/$NODE
 VMXML=$VMDIR/$NODE.xml
@@ -289,17 +297,17 @@ baremetal node vif attach --port-uuid $MGMT_PORT $NODE $MGMT_VIF
 
 
 baremetal node set $NODE \
-    --driver-info deploy_kernel=http://172.19.1.1:3928/static/memdisk \
-    --driver-info deploy_ramdisk=http://172.19.1.1:3928/static/$MFSBSD
+    --driver-info deploy_kernel=http://$PROV_SRV/static/memdisk \
+    --driver-info deploy_ramdisk=http://$PROV_SRV/static/$MFSBSD
 
 baremetal node set $NODE \
-    --driver-info rescue_kernel=http://172.19.1.1:3928/static/memdisk \
-    --driver-info rescue_ramdisk=http://172.19.1.1:3928/static/$MFSBSD
+    --driver-info rescue_kernel=http://$PROV_SRV/static/memdisk \
+    --driver-info rescue_ramdisk=http://$PROV_SRV/static/$MFSBSD
 
-CHECKSUM=$(md5sum /opt/stack/data/ironic/httpboot/static/install.tar.gz | awk '{print $1}')
+CHECKSUM=$(md5sum /opt/stack/data/ironic/httpboot/static/$ONEFS_IMAGE | awk '{print $1}')
 
 baremetal node set $NODE \
-    --instance-info image_source=http://172.19.1.1:3928/static/install.tar.gz \
+    --instance-info image_source=http://$PROV_SRV/static/$ONEFS_IMAGE \
     --instance-info image_checksum=$CHECKSUM \
     --instance-info image_type=whole-disk-image \
     --instance-info root_gb=16
@@ -309,7 +317,7 @@ sleep 30
 
 baremetal node manage $NODE
 baremetal node provide $NODE
-baremetal node deploy $NODE --config-drive http://172.19.1.1:3928/static/machineid_${MACHINEID}
+baremetal node deploy $NODE --config-drive http://$PROV_SRV/static/machineid_${MACHINEID}
 
 
 

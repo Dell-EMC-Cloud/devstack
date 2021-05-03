@@ -19,6 +19,11 @@ NET_ID=$(openstack net list | grep private | awk '{print $2}')
 sudo ip netns exec qrouter-${ROUTER_ID} ip add delete 172.19.1.1/26 dev qr-${PORT_ID:0:11}
 sudo brctl delif brq${NET_ID:0:11} tap${PORT_ID:0:11}
 sudo ip add add 172.19.1.1/26 dev brq${NET_ID:0:11}
+
+# set dns-name
+openstack port set --dns-name psstack-provisioning-service $PORT_ID
+
+# in case there is another compute node
 nova-manage cell_v2 discover_hosts --verbose
 
 # Copy required images/machineid files 
