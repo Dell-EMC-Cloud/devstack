@@ -1,5 +1,5 @@
 #! /bin/bash
-# onefs-node.sh <node>
+# onefs-node.sh
 
 set -x
 
@@ -14,22 +14,18 @@ function generate_mac {
 
 OP=$1
 
-if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') ]]; then
-    echo "baremetal.sh <bios|uefi|delete> <node-spec-file> [<image>] [onefs-image]"
+if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') || (( $# < 5 )) ]]; then
+    echo "$0 <bios|uefi|delete> <node> <mfsbsd-image> <onefs-image> <data-network> <acs>"
     exit 1
 fi
 
-source $2
+ONEFS_NODE=$2
+source /opt/stack/data/ironic/inventory/$ONEFS_NODE.rc
 
-MFSBSD=pic-mfsbsd.iso
-if [[ -n $3 ]]; then
-    MFSBSD=$3
-fi
-
-ONEFS_IMAGE=install.tar.gz
-if [[ -n $4 ]]; then
-    ONEFS_IMAGE=$4
-fi
+MFSBSD=$3
+ONEFS_IMAGE=$4
+DATA_NETWORK=$5
+CONFIG_DRIVE=$6
 
 PROV_SRV=172.19.16.1:3928
 
