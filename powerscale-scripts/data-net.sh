@@ -20,7 +20,7 @@ if [[ $1 == 'create' ]]; then
         PORT_ID=$(openstack port create cust-data-$CLUSTER --disable-port-security --fixed-ip subnet=fsf-cust-data-subnet-$CLUSTER,ip-address=$GW_IP --network fsf-cust-data-net-$CLUSTER | grep '| id ' | awk '{print $4}')
 
         sudo ip link add pic${PORT_ID:0:11} type veth peer name tap${PORT_ID:0:11}
-        openstack port set --binding-profile provisioning-fsf=true --host pic-1 ${PORT_ID}
+	openstack port set --binding-profile provisioning-fsf=true --host $(hostname) ${PORT_ID}
 
         MAC_ADDRESS=$(openstack port show cust-data-$CLUSTER | grep '| mac_address ' | awk '{print $4}')
         sudo ip link set pic${PORT_ID:0:11} address $MAC_ADDRESS

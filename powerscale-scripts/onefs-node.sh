@@ -14,8 +14,8 @@ function generate_mac {
 
 OP=$1
 
-if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') || (( $# < 5 )) ]]; then
-    echo "$0 <bios|uefi|delete> <node> <mfsbsd-image> <onefs-image> <data-network> <acs>"
+if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') || (( $# < 7 )) ]]; then
+    echo "$0 <bios|uefi|delete> <node> <mfsbsd-image> <onefs-image> <data-network> <bsf1-network> <bsf2-network> <acs>"
     exit 1
 fi
 
@@ -25,7 +25,9 @@ source /opt/stack/data/ironic/inventory/$ONEFS_NODE.rc
 MFSBSD=$3
 ONEFS_IMAGE=$4
 DATA_NETWORK=$5
-CONFIG_DRIVE=$6
+BSF1_NETWORK=$6
+BSF2_NETWORK=$7
+CONFIG_DRIVE=$8
 
 PROV_SRV=172.19.16.1:3928
 
@@ -67,12 +69,12 @@ baremetal port create ${PXE_PORT1[0]} --node $NODE_UUID --pxe-enabled true --phy
 
 # Port on Backend Fabric 1
 BSF1_PORT=$(baremetal port create $INT_PORT1 --node $NODE_UUID --pxe-enable false --physical-network bsf1-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
-BSF1_VIF=$(openstack port create $ONEFS_NODE-bsf1-port --network bsf1-onefs-cluster | grep "| id "| awk '{print $4}')
+BSF1_VIF=$(openstack port create $ONEFS_NODE-bsf1-port --network $BSF1_NETWORK | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $BSF1_PORT $ONEFS_NODE $BSF1_VIF
 
 # Port on Backend Fabric 2
 BSF2_PORT=$(baremetal port create $INT_PORT2 --node $NODE_UUID --pxe-enable false --physical-network bsf2-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
-BSF2_VIF=$(openstack port create $ONEFS_NODE-bsf2-port --network bsf2-onefs-cluster | grep "| id "| awk '{print $4}')
+BSF2_VIF=$(openstack port create $ONEFS_NODE-bsf2-port --network $BSF2_NETWORK | grep "| id "| awk '{print $4}')
 baremetal node vif attach --port-uuid $BSF2_PORT $ONEFS_NODE $BSF2_VIF
 
 # Port on Mgmt network

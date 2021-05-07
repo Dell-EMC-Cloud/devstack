@@ -50,6 +50,7 @@ DATA_NET_INFO=(`get_data_net_info`)
 if [[ $OP == "create" ]]; then
     ./data-net.sh create $CLUSTER_NAME $DATA_NET_CIDR ${DATA_NET_INFO[0]}
     DATA_NET_VLAN=$(openstack net show fsf-cust-data-net-$CLUSTER_NAME | grep '| provider:segmentation_id ' | awk '{print $4}')
+    ./cluster-net.sh create $CLUSTER_NAME
 fi
 
 CLUSTER_ACS_FNAME=/opt/stack/data/ironic/httpboot/static/cluster-${CLUSTER_NAME}.json
@@ -152,18 +153,19 @@ if [[ "$EXT_IF" == *agg* ]]; then
     NODE_SCRIPT=port-channel-onefs-node.sh
 fi
 if [[ $OP == "create" ]]; then
-    ./$NODE_SCRIPT uefi ${NODES[0]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME cluster-${CLUSTER_NAME}.json &
+    ./$NODE_SCRIPT uefi ${NODES[0]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME cluster-${CLUSTER_NAME}.json &
     (( LAST=${#NODES[@]} - 1 ))
     if [[ $LAST != 0 ]]; then
         for i in $(seq 1 $LAST); do
-            ./$NODE_SCRIPT uefi ${NODES[$i]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME &
+            ./$NODE_SCRIPT uefi ${NODES[$i]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME &
         done
     fi
 else
     echo ${NODES[@]}
     for node in ${NODES[@]}; do
-        ./$NODE_SCRIPT delete $node $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME &
+        ./$NODE_SCRIPT delete $node $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME &
     done
     wait
     ./data-net.sh delete $CLUSTER_NAME $DATA_NET_CIDR ${DATA_NET_INFO[0]}
+    ./cluster-net.sh delete $CLUSTER_NAME
 fi
