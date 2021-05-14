@@ -85,8 +85,7 @@ cat > $CLUSTER_ACS_FNAME <<EOF
         },
         "encoding": "utf-8",
         "override_serialno_check": true,
-        "join_mode": "auto",
-        "datetime": "2021/04/11 21:47:30"
+        "join_mode": "auto"
     },
     "internal_networking": {
         "internal_interfaces": [
@@ -148,16 +147,18 @@ cat > $CLUSTER_ACS_FNAME <<EOF
 }
 EOF
 
-NODE_SCRIPT=onefs-node.sh
+NODE_SCRIPT=onefs-node-deploy.sh
 if [[ "$EXT_IF" == *agg* ]]; then
-    NODE_SCRIPT=port-channel-onefs-node.sh
+    NODE_SCRIPT=port-channel-deploy.sh
 fi
 if [[ $OP == "create" ]]; then
     ./$NODE_SCRIPT uefi ${NODES[0]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME cluster-${CLUSTER_NAME}.json &
+	sleep 5
     (( LAST=${#NODES[@]} - 1 ))
     if [[ $LAST != 0 ]]; then
         for i in $(seq 1 $LAST); do
             ./$NODE_SCRIPT uefi ${NODES[$i]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME &
+            sleep 5
         done
     fi
 else
@@ -169,3 +170,4 @@ else
     ./data-net.sh delete $CLUSTER_NAME $DATA_NET_CIDR ${DATA_NET_INFO[0]}
     ./cluster-net.sh delete $CLUSTER_NAME
 fi
+

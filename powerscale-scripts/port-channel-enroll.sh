@@ -1,5 +1,5 @@
 #! /bin/bash
-# port-channel-onefs-nodee.sh
+# port-channel-enroll.sh
 
 set -x
 
@@ -14,20 +14,14 @@ function generate_mac {
 
 OP=$1
 
-if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') || (( $# < 7 )) ]]; then
-    echo "$0 <bios|uefi|delete> <node> <mfsbsd-image> <onefs-image> <data-network> <bsf1-network> <bsf2-network> <acs>"
+if [[ -z "$OP" || -z "$2" || ($OP != 'bios' && $OP != 'uefi' && $OP != 'delete') || (( $# < 2 )) ]]; then
+    echo "$0 <bios|uefi|delete> <node>"
     exit 1
 fi
 
 ONEFS_NODE=$2
 source /opt/stack/data/ironic/inventory/$ONEFS_NODE.rc
 
-MFSBSD=$3
-ONEFS_IMAGE=$4
-DATA_NETWORK=$5
-BSF1_NETWORK=$6
-BSF2_NETWORK=$7
-CONFIG_DRIVE=$8
 
 PROV_SRV=172.19.16.1:3928
 
@@ -40,10 +34,6 @@ if [[ -n "$AGENT_ID" ]]; then
     openstack net agent delete $AGENT_ID
 fi
 baremetal node delete $ONEFS_NODE 2>> /dev/null
-openstack port delete $ONEFS_NODE-bsf1-port 2>> /dev/null
-openstack port delete $ONEFS_NODE-bsf2-port 2>> /dev/null
-openstack port delete $ONEFS_NODE-mgmt-port 2>> /dev/null
-openstack port delete $ONEFS_NODE-cust-data-port 2>> /dev/null
 
 if [[ $OP == 'delete' ]]; then
     exit
@@ -71,24 +61,16 @@ baremetal port create ${PXE_PORT2[0]} --node $NODE_UUID --pxe-enabled true --phy
 
 # Port on Backend Fabric 1
 BSF1_PORT=$(baremetal port create $INT_PORT1 --node $NODE_UUID --pxe-enable false --physical-network bsf1-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
-BSF1_VIF=$(openstack port create $ONEFS_NODE-bsf1-port --network $BSF1_NETWORK | grep "| id "| awk '{print $4}')
-baremetal node vif attach --port-uuid $BSF1_PORT $ONEFS_NODE $BSF1_VIF
 
 # Port on Backend Fabric 2
 BSF2_PORT=$(baremetal port create $INT_PORT2 --node $NODE_UUID --pxe-enable false --physical-network bsf2-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id=e1000 | grep '| uuid ' | awk '{print $4}')
-BSF2_VIF=$(openstack port create $ONEFS_NODE-bsf2-port --network $BSF2_NETWORK | grep "| id "| awk '{print $4}')
-baremetal node vif attach --port-uuid $BSF2_PORT $ONEFS_NODE $BSF2_VIF
 
 # Port on Mgmt network
 MGMT_PGP_ID=$(baremetal port group create --node $NODE_UUID --name ${ONEFS_NODE}-mgmt-pgp --address $(generate_mac) --mode 802.3ad --property miimon=100 --property xmit_hash_policy="layer2+3" |  grep '| uuid ' | awk '{print $4}')
 
-
 MGMT_PORT1=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" --port-group $MGMT_PGP_ID | grep '| uuid ' | awk '{print $4}')
 
 MGMT_PORT2=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT2[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT2[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'access', 'fabric': 'frontend'}" --port-group $MGMT_PGP_ID | grep '| uuid ' | awk '{print $4}')
-
-MGMT_VIF=$(openstack port create $ONEFS_NODE-mgmt-port --network fsf-mgmt-net | grep "| id "| awk '{print $4}')
-baremetal node vif attach --vif-info portgroup-uuid=$MGMT_PGP_ID $ONEFS_NODE $MGMT_VIF
 
 # Port on Customer Data network
 DATA_PGP_ID=$(baremetal port group create --node $NODE_UUID --name ${ONEFS_NODE}-data-pgp --address $(generate_mac) --mode 802.3ad --property miimon=100 --property xmit_hash_policy="layer2+3" |  grep '| uuid ' | awk '{print $4}')
@@ -96,36 +78,9 @@ DATA_PGP_ID=$(baremetal port group create --node $NODE_UUID --name ${ONEFS_NODE}
 DATA_PORT1=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT1[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT1[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" --port-group $DATA_PGP_ID | grep '| uuid ' | awk '{print $4}')
 DATA_PORT2=$(baremetal port create $(generate_mac) --node $NODE_UUID --pxe-enable false --physical-network fsf-net --local-link-connection switch_id=11:22:33:44:55:66 --local-link-connection port_id="${PXE_PORT2[2]}" --local-link-connection switch_info="{'switch_ip': '${PXE_PORT2[1]}', 'cluster': 'TestCustomer1', 'preemption': false, 'access_mode': 'trunk', 'fabric': 'frontend'}" --port-group $DATA_PGP_ID | grep '| uuid ' | awk '{print $4}')
 
-DATA_VIF=$(openstack port create $ONEFS_NODE-cust-data-port --network $DATA_NETWORK | grep "| id "| awk '{print $4}')
-baremetal node vif attach --vif-info portgroup-uuid=$DATA_PGP_ID $ONEFS_NODE $DATA_VIF
-
-
-baremetal node set $ONEFS_NODE \
-    --driver-info deploy_kernel=http://$PROV_SRV/static/memdisk \
-    --driver-info deploy_ramdisk=http://$PROV_SRV/static/$MFSBSD
-
-baremetal node set $ONEFS_NODE \
-    --driver-info rescue_kernel=http://$PROV_SRV/static/memdisk \
-    --driver-info rescue_ramdisk=http://$PROV_SRV/static/$MFSBSD
-#    --driver-info bootloader=http://$PROV_SRV/static/OneFS_v9.1.0.5_2021-03_reimg.img
-
-baremetal node set $ONEFS_NODE --property capabilities="boot_mode:uefi"
-
-CHECKSUM=$(md5sum /opt/stack/data/ironic/httpboot/static/$ONEFS_IMAGE | awk '{print $1}')
-
-baremetal node set $ONEFS_NODE \
-    --instance-info image_source=http://$PROV_SRV/static/$ONEFS_IMAGE \
-    --instance-info image_checksum=$CHECKSUM \
-    --instance-info image_type=whole-disk-image \
-    --instance-info root_gb=16
-
-# Let the baremetal agent to catch up
-sleep 30
 
 baremetal node manage $ONEFS_NODE
 baremetal node provide $ONEFS_NODE
-if [[ -n $CONFIG_DRIVE ]]; then
-    baremetal node deploy $ONEFS_NODE --config-drive http://$PROV_SRV/static/$CONFIG_DRIVE
-else
-    baremetal node deploy $ONEFS_NODE
-fi
+
+
+
