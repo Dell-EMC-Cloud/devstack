@@ -27,7 +27,9 @@ if (( $# < 8 )); then
 fi
 shift 7
 
+
 NODES=($@)
+NUMBER_OF_NODES=($#)
 echo ${NODES[@]}
 
 MGMT_NET_CIDR=172.19.32.0/20
@@ -141,7 +143,7 @@ cat > $CLUSTER_ACS_FNAME <<EOF
     },
     "post_cluster": {
         "post_install_commands": {
-            "cmd": "isi network groupnet create groupnet-data \n sleep 5 \n isi zone zones create customer-az /ifs/customer-data --create-path --groupnet groupnet-data \n isi auth users modify Guest --enabled yes --zone customer-az \n isi auth users create admin --enabled yes --password admin --provider local --zone customer-az \n isi auth roles modify --zone customer-az ZoneAdmin --add-user admin \n isi auth roles modify --zone customer-az ZoneSecurityAdmin --add-user admin \n isi network subnets create groupnet-data.cust-data-subnet ipv4 255.255.224.0 --vlan-enabled true --vlan-id $DATA_NET_VLAN --sc-service-addr ${DATA_NET_INFO[1]} \n isi network pools create groupnet-data.cust-data-subnet.pool-data --access-zone customer-az --ranges ${DATA_NET_INFO[2]}-${DATA_NET_INFO[3]} --ifaces 1:$EXT_IF\n"
+            "cmd": "isi network groupnet create groupnet-data \n sleep 5 \n isi zone zones create customer-az /ifs/customer-data --create-path --groupnet groupnet-data \n isi auth users modify Guest --enabled yes --zone customer-az \n isi auth users create admin --enabled yes --password admin --provider local --zone customer-az \n isi auth roles modify --zone customer-az ZoneAdmin --add-user admin \n isi auth roles modify --zone customer-az ZoneSecurityAdmin --add-user admin \n isi network subnets create groupnet-data.cust-data-subnet ipv4 255.255.224.0 --vlan-enabled true --vlan-id $DATA_NET_VLAN --sc-service-addr ${DATA_NET_INFO[1]} \n isi network pools create groupnet-data.cust-data-subnet.pool-data --access-zone customer-az --ranges ${DATA_NET_INFO[2]}-${DATA_NET_INFO[3]} --ifaces 1-$NUMBER_OF_NODES:$EXT_IF\n"
         }
     }
 }
