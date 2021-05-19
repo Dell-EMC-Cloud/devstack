@@ -83,5 +83,7 @@ extension_drivers = port_security,dns_domain_ports
 [DEFAULT]
 log_dir = /opt/stack/logs
 log_file = ironic.log
+[conductor]
+power_state_change_timeout = 120
 [neutron]
 provisioning_network = private
