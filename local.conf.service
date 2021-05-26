@@ -1,6 +1,6 @@
 [[local|localrc]]
 # NOTE: THIS IS THE LOCAL HOST IP ON THE OPENSTACK MANAGEMENT NETWORK
-MY_IP=10.243.86.202
+MY_IP=10.243.86.204
 HOST_IP=$MY_IP
 SERVICE_HOST=$MY_IP
 MYSQL_HOST=$MY_IP
@@ -11,7 +11,7 @@ DATABASE_PASSWORD=$ADMIN_PASSWORD
 RABBIT_PASSWORD=$ADMIN_PASSWORD
 SERVICE_PASSWORD=$ADMIN_PASSWORD
 
-ENABLED_SERVICES=key,n-api,n-cpu,n-cond,n-sch,n-novnc,n-api-meta,placement-api,placement-client,g-api,q-svc,q-dhcp,q-meta,q-agt,q-l3,horizon,rabbit,mysql,networking_baremetal,ironic,ir-api,ir-cond,devstack@virtualbmc.service,n-novnc-cell1,n-super-cond,n-cond-cell1
+ENABLED_SERVICES=key,n-api,n-cpu,n-cond,n-sch,n-novnc,n-api-meta,placement-api,placement-client,g-api,q-svc,q-dhcp,q-meta,q-agt,q-l3,horizon,rabbit,mysql,networking_baremetal,ironic,ir-api,ir-cond,devstack@virtualbmc.service,n-novnc-cell1,n-super-cond,n-cond-cell1,os10_fe_networking
 
 NEUTRON_REPO=https://github.com/Dell-EMC-Cloud/neutron.git
 NEUTRON_BRANCH=powerscale
@@ -29,6 +29,14 @@ VIRT_DRIVER=ironic
 enable_plugin networking-baremetal https://github.com/Dell-EMC-Cloud/networking-baremetal.git powerscale
 enable_service networking_baremetal
 enable_service ir-neutronagt
+
+# Enable networking-baremetal plugin
+enable_plugin OS10-FE-Networking https://github.com/Dell-EMC-Cloud/OS10-FE-Networking.git main
+enable_service os10_fe_networking
+enable_service os10-neutronagt-leaf1
+enable_service os10-neutronagt-leaf2
+enable_service os10-neutronagt-spine1
+enable_service os10-neutronagt-spine2
 
 LOGDIR=$HOME/logs
 LOGFILE=$HOME/logs/devstack.log
@@ -66,7 +74,7 @@ Q_AGENT=linuxbridge
 LB_PHYSICAL_INTERFACE=eno3
 LB_INTERFACE_MAPPINGS=test-net:${LB_PHYSICAL_INTERFACE},fsf-net:bond0
 Q_ML2_TENANT_NETWORK_TYPE=vlan
-ML2_VLAN_RANGES=test-net:100:200,fsf-net:2000:2999,bsf1-net:1000:1999,bsf2-net:1000:1999
+ML2_VLAN_RANGES=test-net:100:200,fsf-net:4000:4090,bsf1-net:1000:1999,bsf2-net:1000:1999
  
 [[post-config|/$NEUTRON_CONF]]
 [DEFAULT]
@@ -83,7 +91,57 @@ extension_drivers = port_security,dns_domain_ports
 [DEFAULT]
 log_dir = /opt/stack/logs
 log_file = ironic.log
+enabled_management_interfaces = fake,ipmitool,idrac-redfish,noop
+enabled_power_interfaces = fake,idrac-redfish,ipmitool
+enabled_boot_interfaces = fake,ipxe,idrac-redfish-virtual-media,powerscale
+enabled_bios_interfaces = idrac-redfish,fake,no-bios
+enabled_hardware_types = idrac,ipmi,fake-hardware
 [conductor]
 power_state_change_timeout = 120
 [neutron]
 provisioning_network = private
+[pxe]
+uefi_ipxe_bootfile_name = loader.efi
+
+
+[[post-config|/$OS10_FE_CONF_FILE_LEAF1]]
+[frontend_switch_fabric]
+switch_ip = 100.127.0.125
+username = admin
+password = REBuZ2Vyb3VzMQ==
+category = leaf
+pg_allocatable_range = 125,128
+link_port_channel_mapping = 100.127.0.121:port-channel1,100.127.0.122:port-channel1
+port_channel_ethernet_mapping = ethernet1/1/61:port-channel1,ethernet1/1/62:port-channel1,ethernet1/1/63:port-channel1,ethernet1/1/64:port-channel1
+
+
+[[post-config|/$OS10_FE_CONF_FILE_LEAF2]]
+[frontend_switch_fabric]
+switch_ip = 100.127.0.126
+username = admin
+password = REBuZ2Vyb3VzMQ==
+category = leaf
+pg_allocatable_range = 125,128
+link_port_channel_mapping = 100.127.0.121:port-channel1,100.127.0.122:port-channel1
+port_channel_ethernet_mapping = ethernet1/1/61:port-channel1,ethernet1/1/62:port-channel1,ethernet1/1/63:port-channel1,ethernet1/1/64:port-channel1
+
+
+[[post-config|/$OS10_FE_CONF_FILE_SPINE1]]
+[frontend_switch_fabric]
+switch_ip = 100.127.0.121
+username = admin
+password = REBuZ2Vyb3VzMQ==
+category = spine
+link_port_channel_mapping = 100.127.0.125:port-channel1,100.127.0.126:port-channel1,pic-1:port-channel102
+port_channel_ethernet_mapping = ethernet1/1/1:port-channel1,ethernet1/1/2:port-channel1,ethernet1/1/3:port-channel1,ethernet1/1/4:port-channel1,ethernet1/1/62:port-channel102
+
+
+[[post-config|/$OS10_FE_CONF_FILE_SPINE2]]
+[frontend_switch_fabric]
+switch_ip = 100.127.0.122
+username = admin
+password = REBuZ2Vyb3VzMQ==
+category = spine
+link_port_channel_mapping = 100.127.0.125:port-channel1,100.127.0.126:port-channel1,pic-1:port-channel102
+port_channel_ethernet_mapping = ethernet1/1/1:port-channel1,ethernet1/1/2:port-channel1,ethernet1/1/3:port-channel1,ethernet1/1/4:port-channel1,ethernet1/1/62:port-channel102
+
