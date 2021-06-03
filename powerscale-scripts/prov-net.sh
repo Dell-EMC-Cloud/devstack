@@ -1,7 +1,7 @@
 set -x
 
 if [[ $1 == 'create' ]]; then
-    NET_ID=$(openstack network create fsf-provisioning-net --provider-physical-network fsf-net --provider-network-type vlan --provider-segment 2000 | grep '| id ' | awk '{print $4}')
+    NET_ID=$(openstack network create fsf-provisioning-net --provider-physical-network fsf-net --provider-network-type vlan | grep '| id ' | awk '{print $4}')
     openstack subnet pool create fsf-provisioning-subnet-pool --pool-prefix 172.19.16.0/20 --default-prefix-length 20
     openstack subnet create fsf-provisioning-subnet --ip-version 4 --subnet-pool fsf-provisioning-subnet-pool --network fsf-provisioning-net --dhcp
     PORT_ID=$(openstack port create provisioning --disable-port-security --fixed-ip subnet=fsf-provisioning-subnet,ip-address=172.19.16.1 --network fsf-provisioning-net --dns-name psstack-provisioning-service | grep '| id ' | awk '{print $4}')
