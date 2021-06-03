@@ -87,9 +87,6 @@ baremetal node set $ONEFS_NODE \
     --instance-info image_type=whole-disk-image \
     --instance-info root_gb=16
 
-# Let the baremetal agent to catch up
-sleep 30
-
 
 if [[ -n $CONFIG_DRIVE ]]; then
     baremetal node deploy $ONEFS_NODE --config-drive http://$PROV_SRV/static/$CONFIG_DRIVE

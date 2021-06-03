@@ -155,12 +155,10 @@ if [[ "$EXT_IF" == *agg* ]]; then
 fi
 if [[ $OP == "create" ]]; then
     ./$NODE_SCRIPT uefi ${NODES[0]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME cluster-${CLUSTER_NAME}.json &
-	sleep 5
     (( LAST=${#NODES[@]} - 1 ))
     if [[ $LAST != 0 ]]; then
         for i in $(seq 1 $LAST); do
             ./$NODE_SCRIPT uefi ${NODES[$i]} $MFSBSD_IMAGE $ONEFS_IMAGE fsf-cust-data-net-$CLUSTER_NAME bsf1-onefs-$CLUSTER_NAME bsf2-onefs-$CLUSTER_NAME &
-            sleep 5
         done
     fi
 else
