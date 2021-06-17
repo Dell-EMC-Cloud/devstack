@@ -101,7 +101,7 @@ enabled_management_interfaces = fake,ipmitool,idrac-redfish,noop
 enabled_power_interfaces = fake,idrac-redfish,ipmitool
 enabled_boot_interfaces = fake,ipxe,idrac-redfish-virtual-media,powerscale
 enabled_bios_interfaces = idrac-redfish,fake,no-bios
-enabled_hardware_types = idrac,ipmi,redfish,fake-hardware
+enabled_hardware_types = idrac,ipmi,fake-hardware
 [conductor]
 power_state_change_timeout = 120
 [neutron]
